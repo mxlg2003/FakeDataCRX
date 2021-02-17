@@ -1,0 +1,20 @@
+{
+  "manifest_version": 2,
+
+  "name": "快捷录入测试数据",
+  "description": "通过使用快捷键快速生成并录入测试数据。[alt + 1] 手机号;[alt + 2] 中文姓名;[alt + 3] 身份证号;[alt + 4] 地址",
+  "version": "1.0",
+
+  "permissions": ["activeTab", "contextMenus", "storage", "http://*/*", "https://*/*", "tabs" ],
+  "browser_action": {
+    "default_icon": "icon.png"
+  },
+  "content_scripts": [ {
+    "all_frames": false,
+    "css": [ ],
+    "js": ["mock.js","mousetrap.min.js","fake.js"],
+    "match_about_blank": true,
+    "matches": [ "http://*/*", "https://*/*", "file:///*/*" ],
+    "run_at": "document_start"
+ }]
+}
