@@ -1,6 +1,5 @@
 "use strict";
 
-
 /**
  * 随机数生成
  * max 最大值 默认10 不包含
@@ -13,8 +12,6 @@ function randomNum(max, min) {
     return Math.floor(Math.random() * (max - min) + min);
 }
 
-
-
 /**
  * 生成随机手机号
  */
@@ -23,7 +20,6 @@ function GetPhone() {
     var n = randomNum(999999999, 100000000);
     return '1' + tow + '' + n
 }
-
 
 /**
  * 生成随机身份证
@@ -82,18 +78,124 @@ function GetAddress() {
     return result
 }
 
-// 填写中文名
-function randomChineseName(e) {
-    var name = Mock.mock('@cname()');
-    e.target.value = name
-    return false;
+
+/**
+ * storage 异步转同步的实现方案
+ */
+function sleep(msec, callback) {
+    return () => {
+        return new Promise((resolve) => setTimeout(() => {
+            if (callback) {
+                callback()
+            }
+            resolve('slept ' + msec + ' ms')
+        }, msec))
+    }
 }
+
+let session = {
+    set: async function (key, value) {
+        let result = null
+        chrome.storage.sync.set({
+            [key]: value,
+        },
+            function (res) {
+                result = { [key]: value }
+            }
+        );
+        for (let i = 0; i < 10; i++) {
+            if (result) return result
+            await sleep(1)()
+            continue
+        }
+        throw '[session] set ' + key + '=' + value + ' fail'
+    },
+    get: async function (key) {
+        let result = null
+        chrome.storage.sync.get({
+            [key]: null,
+        },
+            function (res) {
+                result = res
+            }
+        );
+        for (let i = 0; i < 10; i++) {
+            if (result) return result
+            await sleep(1)()
+            continue
+        }
+        throw '[session] get ' + key + ' fail'
+    },
+    remove: async function (key) {
+        let result = null
+        chrome.storage.sync.remove(key,
+            function (res) {
+                result = { [key]: null }
+            }
+        );
+        for (let i = 0; i < 10; i++) {
+            if (result) return result
+            await sleep(1)()
+            continue
+        }
+        throw '[session] remove ' + key + ' fail'
+    },
+    clear: async function () {
+        let result = null
+        chrome.storage.sync.clear(function (res) {
+            result = {}
+        }
+        );
+        for (let i = 0; i < 10; i++) {
+            if (result) return result
+            await sleep(1)()
+            continue
+        }
+        throw '[session] clear fail'
+    }
+}
+/**
+ * storage 异步转同步的实现方案 结束
+ */
+
+
+
+// 保存上一次录入的手机号
+async function saveLastPhone(data) {
+    // await session.remove('phone')
+    await session.set('phone', data)
+}
+
+// 保存上一次录入的中文名
+async function saveLastChineseName(data) {
+    await session.set('chineseName', data)
+}
+
+// 保存上一次录入的身份证号
+async function saveLastIDCard(data) {
+    await session.set('IDCard', data)
+}
+
+// 保存上一次录入的地址
+async function saveLastAddress(data) {
+    await session.set('address', data)
+}
+
 
 
 // 填写手机号
 function randomPhone(e) {
     var phone = GetPhone();
     e.target.value = phone
+    saveLastPhone(phone)
+    return false;
+}
+
+// 填写中文名
+function randomChineseName(e) {
+    var name = Mock.mock('@cname()');
+    e.target.value = name
+    saveLastChineseName(name)
     return false;
 }
 
@@ -101,6 +203,7 @@ function randomPhone(e) {
 function randomIDCard(e) {
     var IDCard = GetIDCard();
     e.target.value = IDCard
+    saveLastIDCard(IDCard)
     return false;
 }
 
@@ -108,10 +211,46 @@ function randomIDCard(e) {
 function randomAddress(e) {
     var Address = GetAddress();
     e.target.value = Address
+    saveLastAddress(Address)
     return false;
 }
 
 
+/**
+ * 录入上一次数据
+ */
+// 录入上一次手机号
+async function getlastPhone(e) {
+    var result =  await session.get('phone')
+    e.target.value = result.phone
+    return false;
+}
+
+// 录入上一次中文名
+async function getlastChineseName(e) {
+    var result =  await session.get('chineseName')
+    e.target.value = result.chineseName
+    return false;
+}
+
+// 录入上一次身份证号
+async function getlastIDCard(e) {
+    var result =  await session.get('IDCard')
+    e.target.value = result.IDCard
+    return false;
+}
+
+// 录入上一次地址
+async function getlastAddress(e) {
+    var result =  await session.get('address')
+    e.target.value = result.address
+    return false;
+}
+
+
+/**
+ * 快捷键绑定
+ */
 Mousetrap.reset();
 
 // 随机手机号
@@ -125,3 +264,16 @@ Mousetrap.bind('alt+3', randomIDCard)
 
 // 随机地址
 Mousetrap.bind('alt+4', randomAddress)
+
+
+// 输入上一次的手机号
+Mousetrap.bind('ctrl+alt+1', getlastPhone)
+
+// 输入上一次的中文姓名
+Mousetrap.bind('ctrl+alt+2', getlastChineseName)
+
+// 输入上一次的身份证号
+Mousetrap.bind('ctrl+alt+3', getlastIDCard)
+
+// 输入上一次的地址
+Mousetrap.bind('ctrl+alt+4', getlastAddress)
